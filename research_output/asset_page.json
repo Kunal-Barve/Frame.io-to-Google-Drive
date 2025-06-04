@@ -1,0 +1,344 @@
+{
+  "url": "https://next.frame.io/share/798311c3-8f57-4a7b-a35f-fd60c4b5f221/view/7d689031-f683-4bde-9187-53bd1c7445ed",
+  "title": "Hook 3 Espressi Depressi.mp4 - Hook 3 Espressi Depressi - Frame.io",
+  "input_fields": [
+    {
+      "id": "",
+      "name": "",
+      "type": "file",
+      "placeholder": "",
+      "className": "sc-8c148f5e-0 kNgACA"
+    },
+    {
+      "id": "",
+      "name": "",
+      "type": "file",
+      "placeholder": "",
+      "className": ""
+    },
+    {
+      "id": "ot-group-id-C0001",
+      "name": "ot-group-id-C0001",
+      "type": "checkbox",
+      "placeholder": "",
+      "className": "switch-checkbox category-switch-handler"
+    },
+    {
+      "id": "ot-group-id-C0002",
+      "name": "ot-group-id-C0002",
+      "type": "checkbox",
+      "placeholder": "",
+      "className": "switch-checkbox category-switch-handler"
+    },
+    {
+      "id": "ot-group-id-C0003",
+      "name": "ot-group-id-C0003",
+      "type": "checkbox",
+      "placeholder": "",
+      "className": "switch-checkbox category-switch-handler"
+    },
+    {
+      "id": "ot-group-id-C0004",
+      "name": "ot-group-id-C0004",
+      "type": "checkbox",
+      "placeholder": "",
+      "className": "switch-checkbox category-switch-handler"
+    },
+    {
+      "id": "vendor-search-handler",
+      "name": "vendor-search-handler",
+      "type": "text",
+      "placeholder": "Search...",
+      "className": ""
+    },
+    {
+      "id": "storage-access-group",
+      "name": "",
+      "type": "checkbox",
+      "placeholder": "",
+      "className": "ot-group-option-box category-filter-handler"
+    },
+    {
+      "id": "select-all-vendor-leg-handler",
+      "name": "",
+      "type": "checkbox",
+      "placeholder": "",
+      "className": "ot-group-option-box"
+    },
+    {
+      "id": "select-all-vendor-groups-handler",
+      "name": "",
+      "type": "checkbox",
+      "placeholder": "",
+      "className": "ot-group-option-box"
+    },
+    {
+      "id": "select-all-hosts-groups-handler",
+      "name": "",
+      "type": "checkbox",
+      "placeholder": "",
+      "className": "ot-group-option-box"
+    }
+  ],
+  "buttons": [
+    {
+      "id": "",
+      "text": "Back",
+      "className": "StyledButton-vapor__sc-854af918-0 hvWSem",
+      "disabled": false
+    },
+    {
+      "id": "react-aria2312037184-\u00abr1f\u00bb",
+      "text": "Download",
+      "className": "StyledButton-vapor__sc-fa0c084c-0 kskmvJ",
+      "disabled": false
+    },
+    {
+      "id": "",
+      "text": "",
+      "className": "StyledIconButton-vapor__sc-989f58ac-0 jAerFE",
+      "disabled": false
+    },
+    {
+      "id": "",
+      "text": "Play button",
+      "className": "StyledButton-vapor__sc-854af918-0 hUTtE sc-5f6cc60a-1 PkyJd",
+      "disabled": false
+    },
+    {
+      "id": "",
+      "text": "clear-range",
+      "className": "StyledButton-vapor__sc-854af918-0 iJMIc",
+      "disabled": false
+    },
+    {
+      "id": "",
+      "text": "",
+      "className": "StyledIconButton-vapor__sc-989f58ac-0 dqisXk",
+      "disabled": false
+    },
+    {
+      "id": "",
+      "text": "",
+      "className": "StyledIconButton-vapor__sc-989f58ac-0 vfMyA",
+      "disabled": false
+    },
+    {
+      "id": "react-aria2312037184-\u00abr3b\u00bb",
+      "text": "1.0x",
+      "className": "StyledButton-vapor__sc-fb18bf13-0 hUaSPY sc-c41067ea-0 iueMyY",
+      "disabled": false
+    },
+    {
+      "id": "",
+      "text": "",
+      "className": "StyledIconButton-vapor__sc-989f58ac-0 dqisXk",
+      "disabled": false
+    },
+    {
+      "id": "react-aria2312037184-\u00abr3n\u00bb",
+      "text": "00:00:00:00",
+      "className": "StyledButton-vapor__sc-fb18bf13-0 bxofDw",
+      "disabled": false
+    },
+    {
+      "id": "",
+      "text": "",
+      "className": "StyledIconButton-vapor__sc-989f58ac-0 vfMyA",
+      "disabled": false
+    },
+    {
+      "id": "react-aria2312037184-\u00abr3r\u00bb",
+      "text": "HD",
+      "className": "StyledButton-vapor__sc-fb18bf13-0 bxofDw",
+      "disabled": false
+    },
+    {
+      "id": "",
+      "text": "",
+      "className": "StyledIconButton-vapor__sc-989f58ac-0 vfMyA",
+      "disabled": false
+    },
+    {
+      "id": "tab-asset-details-panel-0",
+      "text": "Comments",
+      "className": "StyledTab-vapor__sc-5914136b-0 cXlrwH",
+      "disabled": false
+    },
+    {
+      "id": "tab-asset-details-panel-1",
+      "text": "Fields",
+      "className": "StyledTab-vapor__sc-5914136b-0 iJpeBr",
+      "disabled": false
+    },
+    {
+      "id": "react-aria2312037184-\u00abr23\u00bb",
+      "text": "Filter Comments",
+      "className": "StyledToggleIconButton-vapor__sc-4b8e15f9-0 jWcVfE",
+      "disabled": false
+    },
+    {
+      "id": "react-aria2312037184-\u00abr2e\u00bb",
+      "text": "Sort Comments: Timecode (Default)",
+      "className": "StyledToggleIconButton-vapor__sc-4b8e15f9-0 jWcVfE",
+      "disabled": false
+    },
+    {
+      "id": "",
+      "text": "Search comments",
+      "className": "StyledToggleIconButton-vapor__sc-4b8e15f9-0 jWcVfE",
+      "disabled": false
+    },
+    {
+      "id": "",
+      "text": "",
+      "className": "StyledIconButton-vapor__sc-989f58ac-0 jAerFE",
+      "disabled": true
+    },
+    {
+      "id": "",
+      "text": "",
+      "className": "StyledIconButton-vapor__sc-989f58ac-0 edQSCY",
+      "disabled": true
+    },
+    {
+      "id": "",
+      "text": "",
+      "className": "StyledIconButton-vapor__sc-989f58ac-0 edQSCY",
+      "disabled": true
+    },
+    {
+      "id": "react-aria2312037184-\u00abr2u\u00bb",
+      "text": "",
+      "className": "StyledIconButton-vapor__sc-989f58ac-0 edQSCY",
+      "disabled": true
+    },
+    {
+      "id": "react-aria2312037184-\u00abr31\u00bb",
+      "text": "Public",
+      "className": "StyledButton-vapor__sc-fb18bf13-0 guZyZo",
+      "disabled": true
+    },
+    {
+      "id": "",
+      "text": "",
+      "className": "StyledIconButton-vapor__sc-989f58ac-0 ikNdda",
+      "disabled": true
+    },
+    {
+      "id": "close-pc-btn-handler",
+      "text": "",
+      "className": "main pc-close-button ot-close-icon",
+      "disabled": false
+    },
+    {
+      "id": "",
+      "text": "Don\u2019t enable",
+      "className": "disable-all-btn",
+      "disabled": false
+    },
+    {
+      "id": "enable-recommended-btn-handler",
+      "text": "Enable all",
+      "className": "enable-all-btn",
+      "disabled": false
+    },
+    {
+      "id": "",
+      "text": "Confirm my choices",
+      "className": "save-and-close pc-save-and-close save-preference-btn-handler onetrust-close-btn-handler",
+      "disabled": false
+    },
+    {
+      "id": "ot-question-1",
+      "text": "You are in control of your data.",
+      "className": "ot-general-question",
+      "disabled": false
+    },
+    {
+      "id": "ot-question-2",
+      "text": "What are cookies and why does Adobe use them?",
+      "className": "ot-general-question",
+      "disabled": false
+    },
+    {
+      "id": "ot-question-3",
+      "text": "How do I make choices?",
+      "className": "ot-general-question",
+      "disabled": false
+    },
+    {
+      "id": "accept-recommended-btn-handler",
+      "text": "Enable all",
+      "className": "button-theme",
+      "disabled": false
+    },
+    {
+      "id": "",
+      "text": "Cookie details\u200e",
+      "className": "ot-link-btn category-host-list-btn category-host-list-handler",
+      "disabled": false
+    },
+    {
+      "id": "",
+      "text": "Cookie details\u200e",
+      "className": "ot-link-btn category-host-list-btn category-host-list-handler",
+      "disabled": false
+    },
+    {
+      "id": "",
+      "text": "Cookie details\u200e",
+      "className": "ot-link-btn category-host-list-btn category-host-list-handler",
+      "disabled": false
+    },
+    {
+      "id": "",
+      "text": "Cookie details\u200e",
+      "className": "ot-link-btn category-host-list-btn category-host-list-handler",
+      "disabled": false
+    },
+    {
+      "id": "",
+      "text": "Confirm my choices",
+      "className": "save-preference-btn-handler onetrust-close-btn-handler button-theme",
+      "disabled": false
+    },
+    {
+      "id": "",
+      "text": "Back ButtonBack",
+      "className": "ot-link-btn back-btn-handler",
+      "disabled": false
+    },
+    {
+      "id": "vendor-close-pc-btn-handler",
+      "text": "",
+      "className": "vendors-list pc-close-button ot-close-icon",
+      "disabled": false
+    },
+    {
+      "id": "filter-btn-handler",
+      "text": "Filter Icon",
+      "className": "ot-link-btn",
+      "disabled": false
+    },
+    {
+      "id": "clear-filters-handler",
+      "text": "Clear Filters",
+      "className": "ot-link-btn",
+      "disabled": false
+    },
+    {
+      "id": "filter-apply-handler",
+      "text": "Apply",
+      "className": "ot-pill",
+      "disabled": false
+    },
+    {
+      "id": "",
+      "text": "Confirm my choices",
+      "className": "save-preference-btn-handler onetrust-close-btn-handler button-theme",
+      "disabled": false
+    }
+  ],
+  "forms": []
+}

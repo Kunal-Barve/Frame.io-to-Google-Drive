@@ -67,4 +67,5 @@ temp/
 *.tmp
 
 # Downloaded files
-/downloads/
+/downloads/credentials/
+credentials/

@@ -1,0 +1,2 @@
+2025/06/06 09:35:05 [error] 22#22: *2 connect() failed (113: Host is unreachable) while connecting to upstream, client: 172.18.0.1, server: _, request: "GET / HTTP/1.1", upstream: "http://172.18.0.2:8000/", host: "localhost:80"
+2025/06/06 09:35:38 [error] 22#22: *2 connect() failed (113: Host is unreachable) while connecting to upstream, client: 172.18.0.1, server: _, request: "POST / HTTP/1.1", upstream: "http://172.18.0.2:8000/", host: "localhost:80"

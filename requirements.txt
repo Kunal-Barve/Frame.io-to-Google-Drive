@@ -1,7 +1,8 @@
 # FastAPI and related dependencies
 fastapi==0.110.0
 uvicorn[standard]==0.27.1
-pydantic==2.6.1
+pydantic==2.11.5
+pydantic-core==2.33.2
 pydantic-settings==2.9.1  # Added for BaseSettings functionality
 starlette==0.36.3
 

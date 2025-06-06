@@ -1,0 +1,10 @@
+FROM australia-southeast1-docker.pkg.dev/bunsters/frameio-to-gdrive/frameio-to-gdrive:v1
+
+# Create credentials directory if it doesn't exist
+RUN mkdir -p /credentials
+
+# Copy the service account file into the image
+COPY ./credentials/bunsters_service_account.json /credentials/bunsters_service_account.json
+
+# Set proper permissions
+RUN chmod 400 /credentials/bunsters_service_account.json

@@ -1,0 +1,41 @@
+# Production-optimized Dockerfile for Cloud Run
+FROM python:3.11-slim
+
+WORKDIR /app
+
+# Install required system packages
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    nginx \
+    supervisor \
+    build-essential \
+    curl \
+    xvfb \
+    libgbm1 \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy nginx configuration
+COPY ./nginx/nginx.cloud.conf /etc/nginx/nginx.conf
+
+# Copy requirements and install dependencies
+COPY ./requirements.txt /app/
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy application code
+COPY . /app/
+
+# Create necessary directories
+RUN mkdir -p /var/log/supervisor /app/tmp/downloads /app/tmp/processing /credentials
+
+# Copy the service account file
+COPY ./credentials/bunsters_service_account.json /credentials/bunsters_service_account.json
+RUN chmod 400 /credentials/bunsters_service_account.json
+
+# Create a very simple supervisor configuration that just runs the two processes
+COPY ./deploy/supervisord.simple.conf /etc/supervisor/conf.d/supervisord.conf
+
+# Expose port 8080 for Cloud Run
+EXPOSE 8080
+
+# Command to run supervisor
+CMD ["/usr/bin/supervisord", "-c", "/etc/supervisor/conf.d/supervisord.conf"]

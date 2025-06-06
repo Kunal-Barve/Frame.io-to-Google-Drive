@@ -1,0 +1,71 @@
+version: '3.8'
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile.cloud
+    image: australia-southeast1-docker.pkg.dev/bunsters/frameio-to-gdrive/frameio-to-gdrive:v1
+    container_name: frameio-to-gdrive
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    volumes:
+      # Mount service account file from host to container
+      - ./credentials/bunsters_service_account.json:/credentials/bunsters_service_account.json:ro
+      # Mount tmp directories for persistence
+      - ${DATA_PATH:-./tmp}/downloads:/app/tmp/downloads
+      - ${DATA_PATH:-./tmp}/processing:/app/tmp/processing
+      # Mount logs directory
+      - ${LOG_PATH:-./logs}:/app/logs
+    environment:
+      # FastAPI Configuration
+      - API_HOST=${API_HOST:-0.0.0.0}
+      - API_PORT=${API_PORT:-8000}
+      - DEBUG_MODE=${DEBUG_MODE:-false}
+      - WORKERS=${WORKERS:-1}
+
+      # Frame.io Authentication
+      - FRAME_IO_EMAIL=${FRAME_IO_EMAIL}
+      - FRAME_IO_PASSWORD=${FRAME_IO_PASSWORD}
+
+      # Google Drive API Configuration
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
+      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
+      # For Cloud Run, this should be the deployed service URL
+      - GOOGLE_REDIRECT_URI=${GOOGLE_REDIRECT_URI:-https://frame-to-drive-app-abc123-uc.a.run.app/oauth2callback}
+      - GOOGLE_SERVICE_ACCOUNT_FILE=/credentials/bunsters_service_account.json
+
+      # Google Drive Storage
+      - GOOGLE_DRIVE_FOLDER_ID=${GOOGLE_DRIVE_FOLDER_ID}
+
+      # File Management
+      - TEMP_DOWNLOAD_DIR=/app/tmp/downloads
+      - TEMP_PROCESSING_DIR=/app/tmp/processing
+      - MAX_FILE_SIZE_MB=${MAX_FILE_SIZE_MB:-5000}
+      - DOWNLOAD_TIMEOUT_SECONDS=${DOWNLOAD_TIMEOUT_SECONDS:-300}
+
+      # Security
+      - SECRET_KEY=${SECRET_KEY}
+
+      # Cloud Run specific (for local testing)
+      - PORT=8080
+    networks:
+      - frame-to-drive-network
+    # For Cloud Run internal health checks
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://0.0.0.0:8080/health" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+networks:
+  frame-to-drive-network:
+    driver: bridge
+
+# Create named volumes for data persistence (optional)
+volumes:
+  downloads:
+  processing:
+  logs:

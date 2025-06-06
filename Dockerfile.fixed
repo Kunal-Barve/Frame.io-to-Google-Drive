@@ -1,0 +1,9 @@
+FROM australia-southeast1-docker.pkg.dev/bunsters/frameio-to-gdrive/frameio-to-gdrive:v2
+
+# Create credentials directory if it doesn't exist (already done in v2)
+# RUN mkdir -p /credentials
+
+# Copy the fixed supervisor config
+COPY ./deploy/supervisord.fixed.conf /etc/supervisor/conf.d/supervisord.conf
+
+# The service account file is already copied in v2

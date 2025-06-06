@@ -144,6 +144,47 @@ To update the application on your VPS:
    docker-compose up -d --build
    ```
 
+## Google Cloud Run Deployment
+
+To deploy to Google Cloud Run:
+
+1. Update the project ID and region in the deployment scripts:
+   - For Linux/Mac: `deploy/build_and_push.sh`
+   - For Windows: `deploy/Build-And-Push.ps1`
+
+2. Build and push the Cloud Run optimized image:
+
+   ```bash
+   # Linux/Mac
+   chmod +x deploy/build_and_push.sh
+   ./deploy/build_and_push.sh
+   
+   # Windows PowerShell
+   ./deploy/Build-And-Push.ps1
+   ```
+
+3. Deploy to Cloud Run with environment variables:
+
+   ```bash
+   gcloud run deploy frame-to-drive-app \
+     --image=REGION-docker.pkg.dev/PROJECT_ID/frame-to-drive/frame-to-drive-app:latest \
+     --platform=managed \
+     --region=REGION \
+     --set-env-vars="FRAME_IO_EMAIL=your_email,GOOGLE_CLIENT_ID=your_client_id" \
+     --update-secrets="FRAME_IO_PASSWORD=frame_io_password:latest,GOOGLE_CLIENT_SECRET=google_client_secret:latest"
+   ```
+
+4. For service account authentication, create a secret with the service account JSON:
+
+   ```bash
+   # Create a secret from file
+   gcloud secrets create google_service_account --data-file=./credentials/bunsters_service_account.json
+   
+   # Reference the secret in deployment
+   gcloud run deploy frame-to-drive-app \
+     --update-secrets="/credentials/bunsters_service_account.json=google_service_account:latest"
+   ```
+
 ## API Endpoints
 
 ### Transfer a Frame.io Asset to Google Drive

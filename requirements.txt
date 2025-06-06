@@ -25,3 +25,7 @@ httpx==0.28.1  # Required for FastAPI TestClient
 # Testing libraries
 pytest==7.4.4
 pytest-asyncio==0.23.4
+
+# Deployment dependencies
+supervisor==4.2.5
+supervisor-stdout==0.1.1

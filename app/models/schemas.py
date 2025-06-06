@@ -34,7 +34,8 @@ class FrameIoUrlRequest(BaseModel):
     frame_io_url: HttpUrl = Field(..., description="URL of the Frame.io asset to download")
     drive_folder_id: Optional[str] = Field(
         None, 
-        description="Optional Google Drive folder ID to override the default folder"
+        description="Optional Google Drive folder ID or subfolder name to override the default folder",
+        alias="google_drive_subfolder"
     )
     
     @validator('frame_io_url')
@@ -56,11 +57,34 @@ class DriveFileInfo(BaseModel):
     web_content_link: Optional[HttpUrl] = None
 
 
+class ProcessingStatusEnum(str, Enum):
+    """Enum for processing job state."""
+    QUEUED = "queued"
+    EXTRACTING = "extracting_frame_io_asset"
+    DOWNLOADING = "downloading_asset"
+    PROCESSING = "processing_file"
+    AUTHENTICATING = "authenticating_google_drive"
+    CREATING_FOLDER = "creating_folder"
+    UPLOADING = "uploading_to_google_drive"
+    GENERATING_LINK = "generating_share_link"
+    CLEANUP = "cleaning_up"
+    COMPLETED = "completed"
+    FAILED = "failed"
+
+
 class ProcessingStatusResponse(BaseResponse):
     """Model for processing status responses."""
     status: StatusEnum = StatusEnum.SUCCESS
     processing_id: str
-    state: str
+    state: ProcessingStatusEnum
+    progress: Optional[int] = Field(None, description="Progress percentage (0-100)")
+    details: Optional[str] = None
+    error: Optional[str] = None
+    file_info: Optional[DriveFileInfo] = None
+    share_link: Optional[HttpUrl] = None
+    start_time: Optional[str] = None
+    end_time: Optional[str] = None
+    duration_seconds: Optional[float] = None
 
 
 class GDriveUploadResponse(BaseResponse):

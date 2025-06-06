@@ -10,7 +10,9 @@ This module provides functionality for Google Drive operations, including:
 
 import os
 import json
+import time
 import logging
+import gc
 from typing import Optional, Dict, Any, List, Tuple
 from pathlib import Path
 
@@ -172,7 +174,25 @@ class GoogleDriveService:
         Returns:
             bool: True if authentication was successful, False otherwise.
         """
-        # Try service account authentication first (better for server environments)
+        # Check if we already have a service
+        if self.service:
+            logger.info("Already authenticated with Google Drive")
+            return True
+            
+        # Try to get service account credentials from file first
+        service_account_path = settings.get_service_account_path()
+        if service_account_path and os.path.exists(service_account_path):
+            logger.info(f"Using service account file: {service_account_path}")
+            try:
+                self.credentials = service_account.Credentials.from_service_account_file(
+                    service_account_path, scopes=SCOPES)
+                self.service = build('drive', 'v3', credentials=self.credentials)
+                logger.info("Successfully authenticated with Google Drive using service account file")
+                return True
+            except Exception as e:
+                logger.error(f"Error authenticating with service account file: {e}")
+        
+        # Try service account authentication from environment variable
         if self.authenticate_with_service_account():
             return True
         
@@ -180,15 +200,17 @@ class GoogleDriveService:
         logger.info("Service account authentication failed, falling back to OAuth")
         return self.authenticate_with_oauth()
     
-    def upload_file(self, file_path: str, name: Optional[str] = None, 
-                   mime_type: Optional[str] = None) -> Optional[Dict[str, Any]]:
+    def upload_file(self, file_path: str, folder_id: Optional[str] = None, name: Optional[str] = None, 
+                   mime_type: Optional[str] = None, chunk_size: int = 5 * 1024 * 1024) -> Optional[Dict[str, Any]]:
         """
-        Upload a file to Google Drive.
+        Upload a file to Google Drive with support for shared drives.
         
         Args:
             file_path: Path to the file to upload
+            folder_id: ID of the folder to upload to (default: target folder ID)
             name: Name to give the file in Google Drive (default: file's basename)
             mime_type: MIME type of the file (default: auto-detect)
+            chunk_size: Chunk size in bytes for resumable uploads (default: 5MB)
             
         Returns:
             Optional[Dict[str, Any]]: File metadata if upload was successful, None otherwise
@@ -207,32 +229,74 @@ class GoogleDriveService:
             # Use file's basename if name not provided
             if not name:
                 name = os.path.basename(file_path)
+                
+            # Use target folder if folder_id not provided
+            if not folder_id:
+                folder_id = self.target_folder_id
+            
+            # Get file size for logging
+            file_size = os.path.getsize(file_path)
+            
+            # Try to determine mime type if not provided
+            if not mime_type:
+                import mimetypes
+                mime_type = mimetypes.guess_type(file_path)[0] or 'application/octet-stream'
             
             # Create file metadata
             file_metadata = {
-                'name': name,
-                'parents': [self.target_folder_id] if self.target_folder_id else None
+                'name': name
             }
             
-            # Remove None values
-            file_metadata = {k: v for k, v in file_metadata.items() if v is not None}
+            # Add parent folder if specified
+            if folder_id:
+                file_metadata['parents'] = [folder_id]
             
-            # Create media
+            # Create media with appropriate chunk size for large files
             media = MediaFileUpload(
                 file_path,
                 mimetype=mime_type,
-                resumable=True  # Enable resumable uploads for large files
+                resumable=True,  # Enable resumable uploads for large files
+                chunksize=chunk_size  # Use specified chunk size
             )
             
-            # Upload the file
-            logger.info(f"Uploading file: {file_path} to Google Drive")
-            file = self.service.files().create(
+            # Start upload timer
+            start_time = time.time()
+            
+            # Upload the file with shared drive support and progress tracking
+            logger.info(f"Uploading file: {file_path} ({file_size/1024/1024:.2f} MB, {mime_type}) to Google Drive")
+            
+            # Create the request but don't execute it yet (for progress tracking)
+            request = self.service.files().create(
                 body=file_metadata,
                 media_body=media,
-                fields='id,name,mimeType,webViewLink,size'
-            ).execute()
+                fields='id,name,mimeType,webViewLink,webContentLink,size',
+                supportsAllDrives=True,  # For Shared Drives
+                supportsTeamDrives=True  # For backward compatibility
+            )
+            
+            # Execute the request with progress tracking
+            response = None
+            last_progress = 0
+            
+            # Process the upload in chunks with progress updates
+            while response is None:
+                status, response = request.next_chunk()
+                if status:
+                    progress = int(status.progress() * 100)
+                    if progress - last_progress >= 5:  # Log every 5% change
+                        logger.info(f"Upload progress: {progress}%")
+                        last_progress = progress
+            
+            file = response
+            
+            # Calculate upload speed
+            end_time = time.time()
+            upload_time = end_time - start_time
+            upload_speed = file_size / upload_time if upload_time > 0 else 0
             
             logger.info(f"File uploaded successfully: {file.get('name')} (ID: {file.get('id')})")
+            logger.info(f"Upload time: {upload_time:.2f} seconds ({upload_speed/1024/1024:.2f} MB/s)")
+            
             return file
             
         except HttpError as e:
@@ -241,19 +305,39 @@ class GoogleDriveService:
         except Exception as e:
             logger.error(f"Error uploading file to Google Drive: {e}")
             return None
+        finally:
+            # Clean up the media object to prevent file handle leaks
+            if 'media' in locals() and media is not None:
+                try:
+                    # Check if _fd attribute exists and close it 
+                    if hasattr(media, '_fd'):
+                        try:
+                            media._fd.close()
+                            logger.info("MediaFileUpload internal file handle explicitly closed")
+                        except Exception as e:
+                            logger.warning(f"Error closing MediaFileUpload file handle: {e}")
+                    
+                    # Force resource cleanup
+                    media_str = str(media)  # Keep reference to log what we're cleaning up
+                    media = None  # Remove our reference
+                    import gc
+                    gc.collect()  # Force garbage collection
+                    logger.info(f"Forced garbage collection to release file handles for {media_str}")
+                except Exception as e:
+                    logger.warning(f"Error during media cleanup: {str(e)}")
     
     def create_share_link(self, file_id: str, role: str = 'reader', 
                          type: str = 'anyone') -> Optional[str]:
         """
-        Create a share link for a file in Google Drive.
+        Create a shareable link for a file.
         
         Args:
             file_id: ID of the file to share
-            role: Permission role to grant (reader, writer, commenter)
-            type: Type of permission (user, group, domain, anyone)
+            role: Role to grant (reader, writer, commenter)
+            type: Type of sharing (user, group, domain, anyone)
             
         Returns:
-            Optional[str]: Share link if successful, None otherwise
+            str: Share link URL or None if error
         """
         if not self.service:
             if not self.authenticate():
@@ -261,7 +345,7 @@ class GoogleDriveService:
                 return None
         
         try:
-            # Create the permission
+            # Create permission
             permission = {
                 'type': type,
                 'role': role,
@@ -272,26 +356,112 @@ class GoogleDriveService:
             self.service.permissions().create(
                 fileId=file_id,
                 body=permission,
-                fields='id'
+                fields='id',
+                supportsAllDrives=True
             ).execute()
             
-            # Get the file to retrieve the webViewLink
+            # Get the file metadata including webViewLink
             file = self.service.files().get(
                 fileId=file_id,
-                fields='webViewLink'
+                fields='webViewLink, webContentLink',
+                supportsAllDrives=True
             ).execute()
             
-            share_link = file.get('webViewLink')
-            logger.info(f"Share link created: {share_link}")
+            # Use webContentLink if available, otherwise use webViewLink
+            share_link = file.get('webContentLink', file.get('webViewLink'))
+            
+            # Log success
+            logger.info(f"Created share link for file {file_id}: {share_link}")
+            
             return share_link
             
         except HttpError as e:
             logger.error(f"HTTP error creating share link: {e}")
             return None
-        except Exception as e:
             logger.error(f"Error creating share link: {e}")
             return None
     
+    def find_or_create_folder(self, folder_name: str, parent_folder_id: Optional[str] = None) -> Optional[str]:
+        """
+        Find a folder by name in the parent folder or create it if it doesn't exist.
+        
+        Args:
+            folder_name: Name of the folder to find or create
+            parent_folder_id: ID of the parent folder (default: target folder ID)
+            
+        Returns:
+            Optional[str]: ID of the found or created folder, None if failed
+        """
+        if not self.service:
+            if not self.authenticate():
+                logger.error("Failed to authenticate with Google Drive")
+                return None
+        
+        try:
+            # Use target folder as parent if not specified
+            if not parent_folder_id:
+                parent_folder_id = self.target_folder_id
+                
+            # Build the query to find the folder
+            query_parts = [f"name = '{folder_name}'"]
+            query_parts.append("mimeType = 'application/vnd.google-apps.folder'")
+            
+            # Add parent folder condition if specified
+            if parent_folder_id:
+                query_parts.append(f"'{parent_folder_id}' in parents")
+                
+            # Add not trashed condition
+            query_parts.append("trashed = false")
+                
+            query = " and ".join(query_parts)
+            
+            # Search for the folder
+            results = self.service.files().list(
+                q=query,
+                fields="files(id, name)",
+                supportsAllDrives=True,
+                supportsTeamDrives=True,
+                includeItemsFromAllDrives=True
+            ).execute()
+            
+            folders = results.get('files', [])
+            
+            # If folder exists, return its ID
+            if folders:
+                folder_id = folders[0].get('id')
+                logger.info(f"Found existing folder: {folder_name} (ID: {folder_id})")
+                return folder_id
+            
+            # If folder doesn't exist, create it
+            logger.info(f"Folder not found. Creating: {folder_name}")
+            folder_metadata = {
+                'name': folder_name,
+                'mimeType': 'application/vnd.google-apps.folder'
+            }
+            
+            # Add parent folder if specified
+            if parent_folder_id:
+                folder_metadata['parents'] = [parent_folder_id]
+                
+            # Create the folder
+            folder = self.service.files().create(
+                body=folder_metadata,
+                fields='id, name',
+                supportsAllDrives=True,
+                supportsTeamDrives=True
+            ).execute()
+            
+            folder_id = folder.get('id')
+            logger.info(f"Created new folder: {folder_name} (ID: {folder_id})")
+            return folder_id
+            
+        except HttpError as e:
+            logger.error(f"HTTP error finding/creating folder: {e}")
+            return None
+        except Exception as e:
+            logger.error(f"Error finding/creating folder: {e}")
+            return None
+            
     def get_upload_status(self, file_id: str) -> Optional[Dict[str, Any]]:
         """
         Get the status of an uploaded file.

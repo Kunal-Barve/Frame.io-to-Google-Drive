@@ -1,0 +1,55 @@
+# docker-compose.prod.yml
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile.prod
+    container_name: frame-to-drive-prod
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    volumes:
+      # Mount service account files
+      - ./credentials/bunsters_service_account.json:/app/credentials/bunsters_service_account.json:ro
+      - ./credentials/firebase_service_account.json:/app/credentials/firebase_service_account.json:ro
+      # tmp directories for downloads & processing
+      - ${DATA_PATH:-./tmp}/downloads:/app/tmp/downloads
+      - ${DATA_PATH:-./tmp}/processing:/app/tmp/processing
+      # logs directory (local development)
+      - ${LOG_PATH:-./logs}:/app/logs
+    environment:
+      # FastAPI & Cloud Run
+      - PORT=8080
+      - DEBUG_MODE=${DEBUG_MODE:-false}
+
+      # Playwright browser directory
+      - PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
+
+      # Frame.io creds
+      - FRAME_IO_EMAIL=${FRAME_IO_EMAIL}
+      - FRAME_IO_PASSWORD=${FRAME_IO_PASSWORD}
+
+      # Google Drive / Firestore
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
+      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
+      - GOOGLE_REDIRECT_URI=${GOOGLE_REDIRECT_URI:-https://frameio-to-gdrive-626225955792.australia-southeast1.run.app/oauth2callback}
+      - GOOGLE_SERVICE_ACCOUNT_FILE=/app/credentials/bunsters_service_account.json
+      - GOOGLE_CLOUD_PROJECT=${GOOGLE_CLOUD_PROJECT}
+      - FIRESTORE_EMULATOR_HOST=${FIRESTORE_EMULATOR_HOST:-}
+      - GOOGLE_APPLICATION_CREDENTIALS=/app/credentials/firebase_service_account.json
+      - GOOGLE_DRIVE_FOLDER_ID=${GOOGLE_DRIVE_FOLDER_ID}
+
+      # File management
+      - TEMP_DOWNLOAD_DIR=/app/tmp/downloads
+      - TEMP_PROCESSING_DIR=/app/tmp/processing
+      - MAX_FILE_SIZE_MB=${MAX_FILE_SIZE_MB:-5000}
+      - DOWNLOAD_TIMEOUT_SECONDS=${DOWNLOAD_TIMEOUT_SECONDS:-300}
+
+      # Security
+      - SECRET_KEY=${SECRET_KEY}
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8080/health" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s

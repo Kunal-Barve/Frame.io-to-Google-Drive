@@ -6,6 +6,10 @@ import asyncio
 import logging
 import traceback
 
+
+from app.services.browser_service import BrowserService
+from app.services.transfer_service import TransferService
+
 from app.models.schemas import (
     FrameIoUrlRequest,
     ProcessingStatusResponse,
@@ -294,3 +298,20 @@ async def get_job_status(processing_id: str):
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=str(e) if settings.debug_mode else "An error occurred while retrieving the job status"
         )
+@router.get("/test-browser")
+async def test_browser():
+    """Test browser launch with minimal page load."""
+    try:
+        browser_service = BrowserService()
+        logger.info("Starting minimal browser test")
+        browser, context, page = await browser_service.launch_browser(headless=True)
+        logger.info("Browser launched successfully")
+        await page.goto("https://google.com")
+        title = await page.title()
+        logger.info(f"Page title: {title}")
+        await browser.close()
+        logger.info("Browser closed successfully")
+        return {"success": True, "title": title}
+    except Exception as e:
+        logger.error(f"Test browser error: {str(e)}")
+        return {"success": False, "error": str(e)}

@@ -11,7 +11,10 @@ import asyncio
 import warnings
 import signal
 import gc
-from typing import Optional, Dict, Any
+import glob
+import logging
+from pathlib import Path
+from typing import Optional, Dict, Any, List
 from playwright.async_api import async_playwright, Browser, Page, BrowserContext
 from app.config import settings
 
@@ -34,6 +37,7 @@ class BrowserService:
         """Initialize the BrowserService."""
         self.browser: Optional[Browser] = None
         self.context: Optional[BrowserContext] = None
+        self.logger = logging.getLogger(__name__)
         self.page: Optional[Page] = None
         self.is_logged_in: bool = False
         self.playwright = None
@@ -42,49 +46,125 @@ class BrowserService:
         self.downloads_path = os.path.abspath(settings.temp_download_dir)
         os.makedirs(self.downloads_path, exist_ok=True)
     
-    async def launch_browser(self, headless: bool = True) -> None:
+    def find_chrome_executable(self) -> str:
         """
-        Launch a browser instance.
+        Dynamically find the path to the Chromium executable.
+        
+        Returns:
+            str: The path to the Chromium executable, or None if not found.
+        """
+        # Get the Playwright browsers path from environment or use default
+        browsers_path = os.environ.get('PLAYWRIGHT_BROWSERS_PATH', '/ms-playwright')
+        
+        # Ensure we're using the correct format for Cloud Run (Linux paths)
+        # Remove any Windows-style paths that might be mixed in
+        if browsers_path.startswith('/app/C:') or browsers_path.startswith('C:'):
+            # Fix potential path mixed with Windows paths
+            browsers_path = '/ms-playwright'
+            print(f"Corrected browser path to standard location: {browsers_path}")
+        
+        # Handle absolute paths correctly
+        if not browsers_path.startswith('/'):
+            browsers_path = f"/{browsers_path}"
+            print(f"Added leading slash to browser path: {browsers_path}")
+        
+        print(f"Using browsers_path: {browsers_path}")
+        
+        # For Cloud Run we know the exact structure, try the most likely path first
+        cloud_run_path = os.path.join(browsers_path, "chromium-1105", "chrome-linux", "chrome")
+        if os.path.exists(cloud_run_path):
+            print(f"Found exact Chrome executable at: {cloud_run_path}")
+            return cloud_run_path
+            
+        # Look for chrome executable in any chromium version folder
+        possible_paths = [
+            # Search pattern for all chrome-linux/chrome executables under the browsers path
+            os.path.join(browsers_path, "*", "chrome-linux", "chrome"),
+            # Fallback to typical linux paths
+            "/usr/bin/google-chrome",
+            "/usr/bin/chromium",
+            "/usr/bin/chromium-browser"
+        ]
+        
+        # Try each possible path pattern
+        for pattern in possible_paths:
+            try:
+                matches = glob.glob(pattern)
+                if matches:
+                    executable = matches[0]
+                    print(f"Found Chrome executable at: {executable}")
+                    return executable
+            except Exception as e:
+                print(f"Error searching pattern {pattern}: {str(e)}")
+        
+        # If we get here, we couldn't find the executable
+        print("Warning: Could not find Chrome executable path")
+        return "/ms-playwright/chromium-1105/chrome-linux/chrome"  # Fallback to known path
+    
+    # In browser_service.py, modify the launch_browser method:
+    async def launch_browser(self, headless: bool = True):
+        """
+        Launch the browser with appropriate settings for container environments.
         
         Args:
-            headless (bool, optional): Whether to run the browser in headless mode. Defaults to True.
+            headless: Whether to run in headless mode (default: True)
         
-        Raises:
-            Exception: If there's an error launching the browser.
+        Returns:
+            Tuple of (browser, context, page)
         """
         try:
-            # Start Playwright
-            self.playwright = await async_playwright().start()
+            # Start Playwright if not already started
+            if self.playwright is None:
+                self.playwright = await async_playwright().start()
+                
+            chrome_path = self.find_chrome_executable()
+            self.logger.info(f"Using Chrome executable: {chrome_path}")
+            self.logger.info(f"Starting browser launch with headless={headless}")
             
-            # Launch browser (using Chromium)
+            browser_args = [
+                "--disable-dev-shm-usage",
+                "--no-sandbox",
+                "--disable-gpu",
+                "--disable-software-rasterizer",
+                "--disable-setuid-sandbox",
+                "--single-process",
+                "--no-zygote",
+                "--window-size=1280,720"
+            ]
+            self.logger.info(f"Browser launch args: {browser_args}")
+            
+            # Cloud Run optimized launch options
+            start_time = asyncio.get_event_loop().time()
+            self.logger.info(f"Starting browser launch at {start_time}")
+            
             self.browser = await self.playwright.chromium.launch(
                 headless=headless,
-                args=[
-                    "--disable-dev-shm-usage",  # Useful for Docker containers
-                    "--no-sandbox",  # Required for running in containers
-                    "--disable-setuid-sandbox",
-                ]
+                executable_path=chrome_path,
+                args=browser_args,
+                timeout=300000  # Increase timeout to 5 minutes
             )
             
-            # Create a new browser context with download behavior configured
+            end_time = asyncio.get_event_loop().time()
+            self.logger.info(f"Browser launch completed in {end_time - start_time:.2f} seconds")
+            
+            # Create context with download acceptance
+            self.logger.info("Creating browser context")
             self.context = await self.browser.new_context(
                 accept_downloads=True,
-                viewport={"width": 1280, "height": 720},
-                user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
+                viewport={"width": 1280, "height": 720}
             )
             
-            # Create a new page
+            # Create page
+            self.logger.info("Creating new page")
             self.page = await self.context.new_page()
+            self.logger.info("Browser, context, and page created successfully")
             
-            # Set default navigation timeout (30 seconds)
-            self.page.set_default_navigation_timeout(30000)
-            
-            print("Browser launched successfully")
-            
+            return self.browser, self.context, self.page
         except Exception as e:
-            print(f"Error launching browser: {e}")
-            # Clean up if browser was partially initialized
-            await self.close_browser()
+            self.logger.error(f"Error launching browser: {str(e)}")
+            # Print detailed error info
+            import traceback
+            self.logger.error(f"Traceback: {traceback.format_exc()}")
             raise
     
     async def navigate_to_url(self, url: str) -> None:
@@ -128,18 +208,37 @@ class BrowserService:
             # Navigate to Frame.io login page
             await self.navigate_to_url("https://app.frame.io/login")
             
-            # Wait for the login form to be visible
-            await self.page.wait_for_selector('input[type="email"]', state="visible")
+            # Wait for the login form to be visible with increased timeout
+            await self.page.wait_for_selector('input[type="email"]', state="visible", timeout=60000)
             
-            # Fill in email and password
-            await self.page.fill('input[type="email"]', settings.frame_io_email)
+            # Small delay before interaction to ensure page is fully loaded
+            await asyncio.sleep(2)
+            
+            # Fill in email and password with retry mechanism
+            try:
+                await self.page.fill('input[type="email"]', settings.frame_io_email)
+            except Exception as e:
+                print(f"First attempt to fill email failed: {e}, retrying...")
+                await asyncio.sleep(3)
+                await self.page.fill('input[type="email"]', settings.frame_io_email)
+                
+            await asyncio.sleep(1)  # Brief pause between fields
             await self.page.fill('input[type="password"]', settings.frame_io_password)
             
-            # Click the login button
-            await self.page.click('button[type="submit"]')
+            # Click the login button with retry mechanism
+            try:
+                await self.page.click('button[type="submit"]')
+            except Exception as e:
+                print(f"First attempt to click login button failed: {e}, retrying...")
+                await asyncio.sleep(3)
+                await self.page.click('button[type="submit"]')
             
             # Wait for navigation to complete (dashboard should load)
-            await self.page.wait_for_load_state("networkidle")
+            try:
+                await self.page.wait_for_load_state("networkidle", timeout=60000)
+            except Exception as e:
+                print(f"Network idle wait failed: {e}, trying to continue anyway")
+                # Even if networkidle times out, we'll check for dashboard elements
             
             # Check if login was successful (look for dashboard elements)
             if await self.page.query_selector('.dashboard, .projects, .home-page'):
@@ -172,7 +271,8 @@ class BrowserService:
             raise Exception("Browser not initialized. Call launch_browser() first.")
         
         if timeout is None:
-            timeout = settings.download_timeout_seconds * 1000  # Convert to milliseconds
+            timeout = settings.download_timeout_seconds * 2 * 1000  # Convert to milliseconds and double for container environments
+            print(f"Download timeout set to {timeout/1000} seconds")
         
         try:
             # Create a download promise
